@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>EcoReto 10° – Versión Gamificada</title>
+  <style>
+    body{
+      font-family: 'Trebuchet MS', Arial, sans-serif;
+      background: radial-gradient(circle at top,#1b5e20,#0d3b12);
+      color:#fff; margin:0; padding:0;
+    }
+    .container{
+      max-width:980px; margin:auto; padding:20px;
+      background:rgba(0,0,0,.35); border-radius:16px;
+      box-shadow:0 0 20px rgba(0,0,0,.4);
+    }
+    h1,h2,h3{text-align:center}
+    .hidden{display:none}
+    button{
+      padding:12px 22px; border:none; border-radius:14px;
+      background:#ffeb3b; font-weight:bold; cursor:pointer;
+      box-shadow:0 4px 0 #c9a700;
+    }
+    button:hover{background:#ffc107}
+    button:active{transform:translateY(2px); box-shadow:0 2px 0 #c9a700}
+    .progress{background:#444; border-radius:14px; margin:15px 0}
+    .progress-bar{height:20px;width:0%;background:linear-gradient(90deg,#00e676,#1de9b6);border-radius:14px}
+    .question{background:rgba(255,255,255,.15); padding:18px; border-radius:14px}
+    .score{text-align:center; margin-top:10px; font-weight:bold}
+    .badge{display:inline-block; padding:8px 16px; margin:6px; background:#ff9800; border-radius:22px}
+    .avatar{font-size:34px; cursor:pointer; margin:6px}
+    .podium{display:flex; justify-content:space-around; margin-top:20px}
+    .podium div{background:rgba(255,255,255,.2); padding:12px; border-radius:14px; width:30%; text-align:center}
+    .lives{font-size:22px; text-align:center; margin:8px}
+    .timer{text-align:center; font-size:18px; margin-bottom:10px}
+    .level-box{text-align:center; margin-bottom:10px}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🌍 EcoReto 10°</h1>
+  <h3>Modo Juego – Ecosistemas y Calentamiento Global</h3>
+
+  <div id="register">
+    <h2>👤 Registro de Jugadores</h2>
+    <p>Jugador 1:</p>
+    <input id="name1" placeholder="Nombre" />
+    <div>
+      <span class="avatar" onclick="setAvatar(0,'🦊')">🦊</span>
+      <span class="avatar" onclick="setAvatar(0,'🐢')">🐢</span>
+      <span class="avatar" onclick="setAvatar(0,'🦉')">🦉</span>
+    </div>
+    <hr>
+    <p>Jugador 2 (opcional):</p>
+    <input id="name2" placeholder="Nombre" />
+    <div>
+      <span class="avatar" onclick="setAvatar(1,'🐬')">🐬</span>
+      <span class="avatar" onclick="setAvatar(1,'🐝')">🐝</span>
+      <span class="avatar" onclick="setAvatar(1,'🦋')">🦋</span>
+    </div>
+    <br>
+    <button onclick="startGame()">🎮 Iniciar juego</button>
+  </div>
+
+  <div id="game" class="hidden">
+    <div class="level-box" id="levelBox"></div>
+    <div class="lives" id="lives"></div>
+    <div class="timer" id="timer"></div>
+    <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+    <div id="questionBox"></div>
+    <button onclick="checkAnswer()">Responder</button>
+    <div class="score" id="score"></div>
+  </div>
+
+  <div id="end" class="hidden">
+    <h2>🏆 Podium Final</h2>
+    <div class="podium" id="podium"></div>
+    <h3>🎖️ Insignias y Desempeño</h3>
+    <div id="badges"></div>
+  </div>
+</div>
+
+<script>
+let players=[{name:'',avatar:'',score:0,lives:3},{name:'',avatar:'',score:0,lives:3}];
+let currentPlayer=0;
+let index=0;
+let timerInterval;
+let timeLeft=20;
+
+const questions=[
+{nivel:'FÁCIL',q:"Un ecosistema se define como:",o:["Un conjunto de climas","Seres vivos y su entorno","Solo animales","Un bioma"],a:1},
+{nivel:'FÁCIL',q:"Ejemplo de factor abiótico:",o:["Plantas","Animales","Agua","Hongos"],a:2},
+{nivel:'FÁCIL',q:"El calentamiento global es:",o:["Cambio diario","Aumento de temperatura del planeta","Fenómeno local","Proceso biológico"],a:1},
+{nivel:'FÁCIL',q:"Gas del efecto invernadero:",o:["Oxígeno","CO₂","Nitrógeno","Helio"],a:1},
+{nivel:'FÁCIL',q:"Un productor es:",o:["Carnívoro","Descomponedor","Planta","Omnívoro"],a:2},
+{nivel:'FÁCIL',q:"La fotosíntesis permite:",o:["Respirar","Producir alimento","Cazar","Descomponer"],a:1},
+{nivel:'MEDIO',q:"La deforestación provoca:",o:["Más oxígeno","Pérdida de biodiversidad","Mejor clima","No afecta"],a:1},
+{nivel:'MEDIO',q:"El calentamiento global causa:",o:["Bajar mares","Subir mares","Congelar océanos","Nada"],a:1},
+{nivel:'MEDIO',q:"Una cadena trófica muestra:",o:["Climas","Flujo de energía","Suelos","Rocas"],a:1},
+{nivel:'MEDIO',q:"Menos biodiversidad significa:",o:["Más equilibrio","Menos estabilidad","Más recursos","Nada"],a:1},
+{nivel:'MEDIO',q:"Ecosistema urbano es:",o:["Sin vida","Natural","Modificado con vida","No existe"],a:2},
+{nivel:'MEDIO',q:"Reciclar ayuda a:",o:["Contaminar","Reducir impacto","Deforestar","Calentar"],a:1},
+{nivel:'AVANZADO',q:"Más CO₂ implica:",o:["Menos calor","Más calor","Más oxígeno","Nada"],a:1},
+{nivel:'AVANZADO',q:"Resiliencia es:",o:["Tamaño","Recuperación","Cantidad","Clima"],a:1},
+{nivel:'AVANZADO',q:"Deshielo polar causa:",o:["Sequías","Subida del mar","Más frío","Equilibrio"],a:1},
+{nivel:'AVANZADO',q:"Mitigar es:",o:["Ignorar","Reducir causas","Acelerar","Adaptarse"],a:1},
+{nivel:'AVANZADO',q:"Ejemplo sostenible:",o:["Deforestación","Energía solar","Sobreuso","Contaminar"],a:1},
+{nivel:'AVANZADO',q:"Más emisiones generan:",o:["Equilibrio","Más calentamiento","Estabilidad","Menos CO₂"],a:1}
+];
+
+function setAvatar(p,av){players[p].avatar=av}
+
+function startGame(){
+  players[0].name=document.getElementById('name1').value||'Jugador 1';
+  players[1].name=document.getElementById('name2').value||'';
+  if(!players[1].name){ players=[players[0]]; }
+  document.getElementById('register').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  loadQuestion();
+}
+
+function loadQuestion(){
+  clearInterval(timerInterval);
+  timeLeft=20;
+  document.getElementById('timer').innerText=`⏱️ Tiempo: ${timeLeft}s`;
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    document.getElementById('timer').innerText=`⏱️ Tiempo: ${timeLeft}s`;
+    if(timeLeft<=0){ clearInterval(timerInterval); loseLife(); }
+  },1000);
+
+  const q=questions[index];
+  document.getElementById('levelBox').innerText=`Nivel: ${q.nivel}`;
+  document.getElementById('lives').innerText=`❤️ Vidas: ${players[currentPlayer].lives}`;
+  let html=`<div class='question'><h3>${q.q}</h3>`;
+  q.o.forEach((op,i)=>{html+=`<label><input type='radio' name='opt' value='${i}'> ${op}</label>`});
+  html+="<div id='feedback'></div></div>";
+  document.getElementById('questionBox').innerHTML=html;
+  document.getElementById('score').innerText=`Turno: ${players[currentPlayer].avatar||''} ${players[currentPlayer].name} | Puntaje: ${players[currentPlayer].score}`;
+  document.getElementById('progressBar').style.width=((index/questions.length)*100)+"%";
+}
+
+function loseLife(){
+  players[currentPlayer].lives--;
+  if(players[currentPlayer].lives<=0){ endGame(); return; }
+  nextTurn();
+}
+
+function checkAnswer(){
+  clearInterval(timerInterval);
+  const sel=document.querySelector('input[name="opt"]:checked');
+  if(!sel){document.getElementById('feedback').innerHTML="⚠️ Responde antes de continuar.";return;}
+  const q=questions[index];
+  if(parseInt(sel.value)===q.a){
+    players[currentPlayer].score+=10;
+    document.getElementById('feedback').innerHTML="🎉 ¡Correcto! Ganas 10 puntos.";
+  } else {
+    document.getElementById('feedback').innerHTML=`❌ Incorrecto. Respuesta correcta: <b>${q.o[q.a]}</b>`;
+    loseLife();
+    return;
+  }
+  setTimeout(nextTurn,1200);
+}
+
+function nextTurn(){
+  if(players.length>1){ currentPlayer=currentPlayer===0?1:0; }
+  index++;
+  if(index<questions.length) loadQuestion(); else endGame();
+}
+
+function endGame(){
+  clearInterval(timerInterval);
+  document.getElementById('game').classList.add('hidden');
+  document.getElementById('end').classList.remove('hidden');
+  players.sort((a,b)=>b.score-a.score);
+  let podium='';
+  players.forEach((p,i)=>{
+    podium+=`<div><h3>${i+1}°</h3><p>${p.avatar||''} ${p.name}</p><p>${p.score} pts</p></div>`;
+  });
+  document.getElementById('podium').innerHTML=podium;
+
+  const s=players[0].score;
+  let nivel=s<60?'Bajo':s<90?'Básico':s<120?'Alto':'Superior';
+  let badges=`<b>Desempeño ${nivel}</b><br>`;
+  if(s>=60) badges+="<span class='badge'>🌱 Explorador Verde</span>";
+  if(s>=90) badges+="<span class='badge'>🌍 Analista Climático</span>";
+  if(s>=120) badges+="<span class='badge'>🏆 Guardián del Planeta</span>";
+  document.getElementById('badges').innerHTML=badges;
+
+  generarInformeDocente(players[0],nivel);
+}
+
+function generarInformeDocente(jugador,nivel){
+  const informe=
+`📘 INFORME AUTOMÁTICO PARA EL DOCENTE\n\n`+
+`Nombre del estudiante: ${jugador.name}\n`+
+`Puntaje obtenido: ${jugador.score} puntos\n`+
+`Nivel de desempeño: ${nivel}\n\n`+
+`Competencias evaluadas:\n`+
+`• Comprensión de ecosistemas\n`+
+`• Análisis del calentamiento global\n`+
+`• Relación causa–efecto ambiental\n`+
+`• Toma de decisiones responsables\n\n`+
+`Interpretación pedagógica:\n`+
+(nivel==='Bajo'? 'Requiere refuerzo conceptual.':
+ nivel==='Básico'? 'Reconoce conceptos generales.':
+ nivel==='Alto'? 'Analiza adecuadamente situaciones ambientales.':
+ 'Demuestra pensamiento crítico y conciencia ambiental.')+
+`\n\nRecomendaciones didácticas:\n`+
+`• Mapas conceptuales y estudios de caso\n`+
+`• Debates ambientales guiados\n`+
+`• Proyectos de sostenibilidad escolar`;
+
+  const pre=document.createElement('pre');
+  pre.style.background='rgba(0,0,0,.4)';
+  pre.style.padding='15px';
+  pre.style.borderRadius='12px';
+  pre.style.marginTop='15px';
+  pre.textContent=informe;
+  document.getElementById('end').appendChild(pre);
+}
+</script>
+</body>
+</html>
